@@ -44,15 +44,16 @@ import (
 // }
 
 func normalizeURL(rawURL string) (string, error) {
-	u, err := url.Parse(rawURL)
+	parsedURL, err := url.Parse(rawURL)
 	if err != nil {
-		return "", fmt.Errorf("invalid url")
+		return "", fmt.Errorf("couldn't parse URL: %w", err)
 	}
-	path, ok := strings.CutSuffix(u.Path, "/")
-	if !ok {
-		return u.Host + u.Path, nil
-	}
+	fullPath := parsedURL.Host + parsedURL.Path
 
-	return u.Host + path, nil
+	fullPath = strings.ToLower(fullPath)
+
+	fullPath = strings.TrimSuffix(fullPath, "/")
+
+	return fullPath, nil
 
 }

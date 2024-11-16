@@ -2,10 +2,7 @@ package main
 
 import (
 	"fmt"
-	"io"
-	"net/http"
 	"os"
-	"strings"
 )
 
 func main() {
@@ -19,35 +16,12 @@ func main() {
 		os.Exit(1)
 	}
 	BASE_URL := os.Args[1]
-	fmt.Printf("starting crawl of: %s", BASE_URL)
-	html, err := getHTML(BASE_URL)
-	if err != nil {
-		fmt.Println(err)
+	fmt.Printf("starting crawl of: %s \n", BASE_URL)
+
+	pages := make(map[string]int)
+	crawlPage(BASE_URL, BASE_URL, pages)
+
+	for k, v := range pages {
+		fmt.Println(k, v)
 	}
-	fmt.Println(html)
-}
-
-func getHTML(rawURL string) (string, error) {
-	res, err := http.Get(rawURL)
-	if err != nil {
-		return "", err
-	}
-
-	defer res.Body.Close()
-
-	if res.StatusCode >= 400 {
-		return "", fmt.Errorf("status code %v", res.StatusCode)
-	}
-
-	if !strings.HasPrefix(res.Header.Get("content-type"), "text/html") {
-		return "", fmt.Errorf("content-type is not text/html")
-	}
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return "", err
-	}
-
-	return string(data), nil
-
 }

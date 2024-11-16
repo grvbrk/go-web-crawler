@@ -2,33 +2,47 @@ package main
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
 
 	"golang.org/x/net/html"
-	"golang.org/x/net/html/atom"
 )
 
 func getURLsFromHTML(htmlBody, rawBaseURL string) ([]string, error) {
-	document, err := html.Parse(strings.NewReader(htmlBody))
-	results := []string{}
+	baseURL, err := url.Parse(rawBaseURL)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing out htmlBody")
+		return nil, fmt.Errorf("couldn't parse base URL: %v", err)
 	}
-	for node := range document.Descendants() {
-		if node.Type == html.ElementNode && node.DataAtom == atom.A {
-			for _, a := range node.Attr {
-				if a.Key == "href" {
-					urlPath := a.Val
-					ok := strings.HasPrefix(urlPath, "https")
-					if !ok {
-						results = append(results, rawBaseURL+urlPath)
-					} else {
-						results = append(results, urlPath)
+
+	htmlReader := strings.NewReader(htmlBody)
+	doc, err := html.Parse(htmlReader)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't parse HTML: %v", err)
+	}
+
+	var urls []string
+	var traverseNodes func(*html.Node)
+	traverseNodes = func(node *html.Node) {
+		if node.Type == html.ElementNode && node.Data == "a" {
+			for _, anchor := range node.Attr {
+				if anchor.Key == "href" {
+					href, err := url.Parse(anchor.Val)
+					if err != nil {
+						fmt.Printf("couldn't parse href '%v': %v\n", anchor.Val, err)
+						continue
 					}
-					break
+
+					resolvedURL := baseURL.ResolveReference(href)
+					urls = append(urls, resolvedURL.String())
 				}
 			}
 		}
+
+		for child := node.FirstChild; child != nil; child = child.NextSibling {
+			traverseNodes(child)
+		}
 	}
-	return results, nil
+	traverseNodes(doc)
+
+	return urls, nil
 }
