@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -17,8 +18,6 @@ type config struct {
 	maxPages           int
 }
 
-const maxConcurrency = 1
-
 func main() {
 	start := time.Now()
 	args := os.Args
@@ -27,8 +26,19 @@ func main() {
 		os.Exit(1)
 	}
 
-	if len(args) > 2 {
+	if len(args) > 4 {
 		fmt.Println("too many arguments provided")
+		os.Exit(1)
+	}
+
+	maxConcurrency, err := strconv.Atoi(os.Args[2])
+	if err != nil {
+		fmt.Println("Error parsing maxConcurrency cmd argument")
+		os.Exit(1)
+	}
+	maxPages, err := strconv.Atoi(os.Args[3])
+	if err != nil {
+		fmt.Println("Error parsing maxPages cmd argument")
 		os.Exit(1)
 	}
 
@@ -45,7 +55,7 @@ func main() {
 		mu:                 &sync.Mutex{},
 		concurrencyControl: make(chan struct{}, maxConcurrency),
 		wg:                 &sync.WaitGroup{},
-		maxPages:           50,
+		maxPages:           maxPages,
 	}
 
 	config.wg.Add(1)
@@ -58,6 +68,8 @@ func main() {
 		fmt.Println(k, v)
 	}
 
-	fmt.Printf("Time took for crawling %s website: %v", os.Args[1], duration.Seconds())
+	fmt.Printf("Time took for crawling %s: %v\n", os.Args[1], duration.Seconds())
+
+	printReport(config.pages, os.Args[1])
 
 }
